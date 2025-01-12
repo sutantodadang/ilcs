@@ -1,0 +1,26 @@
+services:
+  db:
+    container_name: todo-db
+    image: postgres:12-alpine
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: todo
+    ports:
+      - "5432:5432"
+    volumes:
+      - todo:/var/lib/postgresql/data
+
+  app:
+    container_name: todo-app
+    build: .
+    ports:
+      - "7575:7575"
+    depends_on:
+      - db
+    env_file:
+      - .env
+
+volumes:
+  todo:
+

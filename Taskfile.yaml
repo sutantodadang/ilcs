@@ -1,0 +1,26 @@
+version: "3"
+
+dotenv: [".env"]
+
+tasks:
+  setup:
+    desc: Setup the project
+    cmds:
+      - go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+      - go install github.com/pressly/goose/v3/cmd/goose@latest
+
+  run:
+    cmds:
+      - go run cmd/main.go
+
+  generate:
+    desc: Generate code
+    aliases: [sg]
+    cmds:
+      - sqlc generate
+
+  new-migrations:
+    desc: Create new migration file
+    aliases: [nm]
+    cmds:
+      - goose -s create {{.NAME}} sql

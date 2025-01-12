@@ -2,12 +2,19 @@ package todo
 
 import (
 	"context"
+	"encoding/json"
+	"errors"
+	"ilcs/database"
+	"ilcs/internal/constants"
 	"ilcs/internal/repositories"
+	"os"
 	"sync"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog/log"
 )
 
@@ -17,15 +24,18 @@ type ITodoService interface {
 	GetTodo(ctx context.Context, id string) (todo Todo, err error)
 	UpdateTodo(ctx context.Context, req UpdateTodoRequest, id string) (todo repositories.Todo, err error)
 	DeleteTodo(ctx context.Context, id string) (err error)
+	GetToken(ctx context.Context) (token string, err error)
 }
 
 type TodoService struct {
-	repo repositories.Querier
+	repo    repositories.Querier
+	redisDb database.RedisClient
 }
 
-func NewTodoService(repo repositories.Querier) *TodoService {
+func NewTodoService(repo repositories.Querier, redisDb database.RedisClient) *TodoService {
 	return &TodoService{
-		repo: repo,
+		repo:    repo,
+		redisDb: redisDb,
 	}
 }
 
@@ -163,24 +173,55 @@ func (s *TodoService) GetListTodos(ctx context.Context, req ListTodoRequestParam
 
 func (s *TodoService) GetTodo(ctx context.Context, id string) (todo Todo, err error) {
 
+	key := constants.CACHE_KEY + id
+
 	uuidTodo, err := uuid.Parse(id)
 	if err != nil {
 		log.Error().Err(err).Send()
 		return
 	}
 
-	data, err := s.repo.GetTodoById(ctx, pgtype.UUID{Valid: true, Bytes: uuidTodo})
-	if err != nil {
+	val, err := s.redisDb.Get(ctx, key).Result()
+	if errors.Is(err, redis.Nil) {
+
+		data, errG := s.repo.GetTodoById(ctx, pgtype.UUID{Valid: true, Bytes: uuidTodo})
+		if errG != nil {
+			log.Error().Err(errG).Send()
+			err = errG
+			return
+		}
+
+		todo = Todo{
+			ID:          data.ID.String(),
+			Title:       data.Title,
+			Description: data.Description.String,
+			Status:      string(data.Status),
+			DueDate:     data.DueDate.Time.Format("2006-01-02"),
+		}
+
+		dataByte, errG := json.Marshal(todo)
+		if errG != nil {
+			log.Error().Err(errG).Send()
+			err = errG
+			return
+		}
+
+		err = s.redisDb.Set(ctx, key, dataByte, 10*time.Minute).Err()
+		if err != nil {
+			log.Error().Err(err).Send()
+			return
+		}
+
+	} else if err != nil {
 		log.Error().Err(err).Send()
 		return
-	}
+	} else {
+		err = json.Unmarshal([]byte(val), &todo)
+		if err != nil {
+			log.Error().Err(err).Send()
+			return
 
-	todo = Todo{
-		ID:          data.ID.String(),
-		Title:       data.Title,
-		Description: data.Description.String,
-		Status:      string(data.Status),
-		DueDate:     data.DueDate.Time.Format("2006-01-02"),
+		}
 	}
 
 	return
@@ -227,6 +268,21 @@ func (s *TodoService) DeleteTodo(ctx context.Context, id string) (err error) {
 
 	err = s.repo.DeleteTodo(ctx, pgtype.UUID{Valid: true, Bytes: uuidTodo})
 
+	if err != nil {
+		log.Error().Err(err).Send()
+		return
+	}
+
+	return
+}
+
+func (s *TodoService) GetToken(ctx context.Context) (token string, err error) {
+
+	claimsJwt := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
+		"exp": time.Now().Add(time.Hour * 24).Unix(),
+	})
+
+	token, err = claimsJwt.SignedString([]byte(os.Getenv("JWT_SECRET")))
 	if err != nil {
 		log.Error().Err(err).Send()
 		return

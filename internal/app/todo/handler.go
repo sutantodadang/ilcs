@@ -13,6 +13,7 @@ type ITodoHandler interface {
 	GetTodoById(c *gin.Context)
 	UpdateTodo(c *gin.Context)
 	DeleteTodo(c *gin.Context)
+	GetToken(c *gin.Context)
 }
 
 type TodoHandler struct {
@@ -146,4 +147,15 @@ func (h *TodoHandler) DeleteTodo(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"message": "Task deleted successfully"})
+}
+
+func (h *TodoHandler) GetToken(c *gin.Context) {
+
+	token, err := h.service.GetToken(c)
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(200, gin.H{"token": token})
 }

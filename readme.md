@@ -31,6 +31,10 @@ To run this project, you will need to add the following environment variables to
 
 `PORT`
 
+`JWT_SECRET`
+
+`REDIS_ADDR`
+
 ## Run Locally
 
 Run with docker
@@ -61,11 +65,21 @@ import using postman this json
     {
       "name": "Create Todo",
       "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzY3Nzg3NzR9.3UF9wtg--CjqFDr1awHM-qJpZRnH-l4JEzM5NSBCl-w",
+              "type": "string"
+            }
+          ]
+        },
         "method": "POST",
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{\r\n    \"title\": \"game\",\r\n    \"description\": \"memainkan game\",\r\n    \"due_date\": \"2025-01-12\"\r\n}",
+          "raw": "{\r\n    \"title\": \"stream\",\r\n    \"description\": \"melakukan streaming\",\r\n    \"due_date\": \"2025-01-12\"\r\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -85,10 +99,20 @@ import using postman this json
     {
       "name": "Get List Todo",
       "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzY3Nzg3NzR9.3UF9wtg--CjqFDr1awHM-qJpZRnH-l4JEzM5NSBCl-w",
+              "type": "string"
+            }
+          ]
+        },
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "http://localhost:7575/api/v1/tasks?page=1&limit=10&search=makan&status=completed",
+          "raw": "http://localhost:7575/api/v1/tasks?page=1&limit=10",
           "protocol": "http",
           "host": ["localhost"],
           "port": "7575",
@@ -104,11 +128,13 @@ import using postman this json
             },
             {
               "key": "search",
-              "value": "makan"
+              "value": "makan",
+              "disabled": true
             },
             {
               "key": "status",
-              "value": "completed"
+              "value": "completed",
+              "disabled": true
             }
           ]
         }
@@ -118,6 +144,16 @@ import using postman this json
     {
       "name": "Get Todo By Id",
       "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzY3Nzg3NzR9.3UF9wtg--CjqFDr1awHM-qJpZRnH-l4JEzM5NSBCl-w",
+              "type": "string"
+            }
+          ]
+        },
         "method": "GET",
         "header": [],
         "url": {
@@ -129,7 +165,7 @@ import using postman this json
           "variable": [
             {
               "key": "id",
-              "value": ""
+              "value": "01945895-1d9d-7de4-8623-80f32435fe73"
             }
           ]
         }
@@ -139,11 +175,21 @@ import using postman this json
     {
       "name": "Update Todo",
       "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzY3Nzg3NzR9.3UF9wtg--CjqFDr1awHM-qJpZRnH-l4JEzM5NSBCl-w",
+              "type": "string"
+            }
+          ]
+        },
         "method": "PUT",
         "header": [],
         "body": {
           "mode": "raw",
-          "raw": "{\r\n    \"title\": \"todo3\",\r\n    \"description\": \"desc\",\r\n    \"status\": \"completed\",\r\n    \"due_date\": \"2025-02-12\"\r\n}",
+          "raw": "{\r\n    \"title\": \"game\",\r\n    \"description\": \"memainkan game\",\r\n    \"status\": \"completed\",\r\n    \"due_date\": \"2025-02-12\"\r\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -159,7 +205,7 @@ import using postman this json
           "variable": [
             {
               "key": "id",
-              "value": ""
+              "value": "01945895-1d9d-7de4-8623-80f32435fe73"
             }
           ]
         }
@@ -169,6 +215,16 @@ import using postman this json
     {
       "name": "Delete Todo",
       "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE3MzY3Nzg3NzR9.3UF9wtg--CjqFDr1awHM-qJpZRnH-l4JEzM5NSBCl-w",
+              "type": "string"
+            }
+          ]
+        },
         "method": "DELETE",
         "header": [],
         "url": {
@@ -180,9 +236,24 @@ import using postman this json
           "variable": [
             {
               "key": "id",
-              "value": ""
+              "value": "019455ed-27b2-770b-b74c-67d1ff797cb0"
             }
           ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Token",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "http://localhost:7575/api/v1/token",
+          "protocol": "http",
+          "host": ["localhost"],
+          "port": "7575",
+          "path": ["api", "v1", "token"]
         }
       },
       "response": []

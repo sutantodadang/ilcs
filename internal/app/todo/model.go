@@ -24,6 +24,6 @@ type ListTodoRequestParams struct {
 type UpdateTodoRequest struct {
 	Title       string `json:"title" binding:"required"`
 	Description string `json:"description"`
-	Status      string `json:"status" binding:"required,oneof=pending,completed"`
+	Status      string `json:"status" binding:"required,oneof=pending completed"`
 	DueDate     string `json:"due_date" binding:"required,datetime=2006-01-02"`
 }

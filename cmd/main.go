@@ -15,6 +15,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/redis/go-redis/v9"
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 )
@@ -31,10 +32,14 @@ func main() {
 
 	defer db.Close()
 
+	redisDb := database.ConnectRedis()
+
+	defer redisDb.Close()
+
 	app.Use(middlewares.Trace())
 	app.Use(middlewares.RequestLoggerMiddleware(), middlewares.ResponseLoggerMiddleware())
 
-	setupContainer(app, db)
+	setupContainer(app, db, redisDb)
 
 	server := &http.Server{
 		Addr:    ":" + os.Getenv("PORT"),
@@ -64,11 +69,11 @@ func main() {
 
 }
 
-func setupContainer(app *gin.Engine, db *pgxpool.Pool) {
+func setupContainer(app *gin.Engine, db *pgxpool.Pool, redisDb *redis.Client) {
 
 	repo := repositories.New(db)
 
-	todoService := todo.NewTodoService(repo)
+	todoService := todo.NewTodoService(repo, redisDb)
 
 	todoHandler := todo.NewTodoHandler(todoService)
 

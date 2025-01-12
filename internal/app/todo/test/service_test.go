@@ -10,6 +10,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 )
@@ -48,9 +49,24 @@ func (m *MockRepo) DeleteTodo(ctx context.Context, id pgtype.UUID) error {
 	return args.Error(0)
 }
 
+type MockRedisClient struct {
+	mock.Mock
+}
+
+func (m *MockRedisClient) Get(ctx context.Context, key string) *redis.StringCmd {
+	args := m.Called(ctx, key)
+	return redis.NewStringResult(args.String(0), args.Error(1))
+}
+
+func (m *MockRedisClient) Set(ctx context.Context, key string, value interface{}, expiration time.Duration) *redis.StatusCmd {
+	args := m.Called(ctx, key, value, expiration)
+	return redis.NewStatusResult(args.String(0), args.Error(1))
+}
+
 func TestCreateTodo_Success(t *testing.T) {
 	mockRepo := new(MockRepo)
-	service := todo.NewTodoService(mockRepo)
+	mockRedisClient := new(MockRedisClient)
+	service := todo.NewTodoService(mockRepo, mockRedisClient)
 
 	req := todo.CreateTodoRequest{
 		Title:       "Test Todo",
@@ -76,7 +92,8 @@ func TestCreateTodo_Success(t *testing.T) {
 
 func TestCreateTodo_InvalidDate(t *testing.T) {
 	mockRepo := new(MockRepo)
-	service := todo.NewTodoService(mockRepo)
+	mockRedisClient := new(MockRedisClient)
+	service := todo.NewTodoService(mockRepo, mockRedisClient)
 
 	req := todo.CreateTodoRequest{
 		Title:       "Test Todo",
@@ -92,7 +109,8 @@ func TestCreateTodo_InvalidDate(t *testing.T) {
 
 func TestGetListTodos_Success(t *testing.T) {
 	mockRepo := new(MockRepo)
-	service := todo.NewTodoService(mockRepo)
+	mockRedisClient := new(MockRedisClient)
+	service := todo.NewTodoService(mockRepo, mockRedisClient)
 
 	req := todo.ListTodoRequestParams{
 		Page:  func(i int) *int { return &i }(1),
@@ -144,7 +162,8 @@ func TestGetListTodos_Success(t *testing.T) {
 
 func TestGetTodo_Success(t *testing.T) {
 	mockRepo := new(MockRepo)
-	service := todo.NewTodoService(mockRepo)
+	mockRedisClient := new(MockRedisClient)
+	service := todo.NewTodoService(mockRepo, mockRedisClient)
 
 	id := uuid.New().String()
 
@@ -164,17 +183,21 @@ func TestGetTodo_Success(t *testing.T) {
 	}
 
 	mockRepo.On("GetTodoById", mock.Anything, mock.Anything).Return(returnTodo, nil)
+	mockRedisClient.On("Get", mock.Anything, "todo:"+id).Return("", redis.Nil)
+	mockRedisClient.On("Set", mock.Anything, "todo:"+id, mock.Anything, mock.Anything).Return("OK", nil)
 
 	todo, err := service.GetTodo(context.Background(), id)
 
 	assert.NoError(t, err)
 	assert.Equal(t, expectedTodo, todo)
 	mockRepo.AssertExpectations(t)
+	mockRedisClient.AssertExpectations(t)
 }
 
 func TestUpdateTodo_Success(t *testing.T) {
 	mockRepo := new(MockRepo)
-	service := todo.NewTodoService(mockRepo)
+	mockRedisClient := new(MockRedisClient)
+	service := todo.NewTodoService(mockRepo, mockRedisClient)
 
 	id := uuid.New().String()
 
@@ -202,7 +225,8 @@ func TestUpdateTodo_Success(t *testing.T) {
 
 func TestDeleteTodo_Success(t *testing.T) {
 	mockRepo := new(MockRepo)
-	service := todo.NewTodoService(mockRepo)
+	mockRedisClient := new(MockRedisClient)
+	service := todo.NewTodoService(mockRepo, mockRedisClient)
 
 	id := uuid.New().String()
 
